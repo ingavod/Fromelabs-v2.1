@@ -1,0 +1,127 @@
+// types/roles.ts
+export type UserRole = 'USER' | 'BETA' | 'MODERATOR' | 'ADMIN' | 'SUPER' | 'OWNER'
+
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  USER: 0,
+  BETA: 0,
+  MODERATOR: 1,
+  ADMIN: 2,
+  SUPER: 3,
+  OWNER: 4,
+}
+
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  USER: 'Usuario estándar con acceso básico al sistema (50 mensajes/mes)',
+  BETA: 'Usuario beta con acceso extendido para pruebas (2500 mensajes/mes gratis)',
+  MODERATOR: 'Puede ver todo pero no puede editar. Ideal para supervisión.',
+  ADMIN: 'Gestiona usuarios, planes y estadísticas. Control total excepto otros admins.',
+  SUPER: 'Acceso completo. Puede eliminar usuarios y gestionar administradores. NO puede tocar otros SUPER.',
+  OWNER: 'Dueño absoluto. Control total sin restricciones incluyendo SUPER y OWNER.',
+}
+
+export const PERMISSIONS = {
+  USE_CHAT: 'use_chat',
+  VIEW_OWN_ACCOUNT: 'view_own_account',
+  UPDATE_OWN_PROFILE: 'update_own_profile',
+  MANAGE_OWN_SUBSCRIPTION: 'manage_own_subscription',
+  VIEW_OWN_CONVERSATIONS: 'view_own_conversations',
+  VIEW_USERS_LIST: 'view_users_list',
+  VIEW_BASIC_STATS: 'view_basic_stats',
+  VIEW_USER_DETAILS: 'view_user_details',
+  EDIT_USERS: 'edit_users',
+  BLOCK_USERS: 'block_users',
+  CHANGE_USER_PLAN: 'change_user_plan',
+  VIEW_FULL_STATS: 'view_full_stats',
+  MANAGE_USER_ROLES: 'manage_user_roles',
+  DELETE_USERS: 'delete_users',
+  CHANGE_ADMIN_ROLES: 'change_admin_roles',
+  FULL_SYSTEM_ACCESS: 'full_system_access',
+  MANAGE_SUPER_ADMINS: 'manage_super_admins',
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  USER: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+  ],
+  BETA: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+  ],
+  MODERATOR: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+    PERMISSIONS.VIEW_USERS_LIST,
+    PERMISSIONS.VIEW_BASIC_STATS,
+    PERMISSIONS.VIEW_USER_DETAILS,
+  ],
+  ADMIN: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+    PERMISSIONS.VIEW_USERS_LIST,
+    PERMISSIONS.VIEW_BASIC_STATS,
+    PERMISSIONS.VIEW_USER_DETAILS,
+    PERMISSIONS.EDIT_USERS,
+    PERMISSIONS.BLOCK_USERS,
+    PERMISSIONS.CHANGE_USER_PLAN,
+    PERMISSIONS.VIEW_FULL_STATS,
+    PERMISSIONS.MANAGE_USER_ROLES,
+  ],
+  SUPER: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+    PERMISSIONS.VIEW_USERS_LIST,
+    PERMISSIONS.VIEW_BASIC_STATS,
+    PERMISSIONS.VIEW_USER_DETAILS,
+    PERMISSIONS.EDIT_USERS,
+    PERMISSIONS.BLOCK_USERS,
+    PERMISSIONS.CHANGE_USER_PLAN,
+    PERMISSIONS.VIEW_FULL_STATS,
+    PERMISSIONS.MANAGE_USER_ROLES,
+    PERMISSIONS.DELETE_USERS,
+    PERMISSIONS.CHANGE_ADMIN_ROLES,
+    PERMISSIONS.FULL_SYSTEM_ACCESS,
+  ],
+  OWNER: [
+    PERMISSIONS.USE_CHAT,
+    PERMISSIONS.VIEW_OWN_ACCOUNT,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.MANAGE_OWN_SUBSCRIPTION,
+    PERMISSIONS.VIEW_OWN_CONVERSATIONS,
+    PERMISSIONS.VIEW_USERS_LIST,
+    PERMISSIONS.VIEW_BASIC_STATS,
+    PERMISSIONS.VIEW_USER_DETAILS,
+    PERMISSIONS.EDIT_USERS,
+    PERMISSIONS.BLOCK_USERS,
+    PERMISSIONS.CHANGE_USER_PLAN,
+    PERMISSIONS.VIEW_FULL_STATS,
+    PERMISSIONS.MANAGE_USER_ROLES,
+    PERMISSIONS.DELETE_USERS,
+    PERMISSIONS.CHANGE_ADMIN_ROLES,
+    PERMISSIONS.FULL_SYSTEM_ACCESS,
+    PERMISSIONS.MANAGE_SUPER_ADMINS,
+  ],
+}
+
+export function hasPermission(userRole: UserRole, permission: string): boolean {
+  return ROLE_PERMISSIONS[userRole]?.includes(permission) || false
+}
+
+export function canManageUserRole(adminRole: UserRole, targetRole: UserRole): boolean {
+  return ROLE_HIERARCHY[adminRole] > ROLE_HIERARCHY[targetRole]
+}
