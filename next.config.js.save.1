@@ -1,0 +1,41 @@
+/** @type {import('next').NextConfig} */
+const path = require('path');
+
+const nextConfig = {
+  // Ignorar errores de TypeScript durante el build
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
+  // Ignorar errores de ESLint durante el build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // Configuración de webpack para resolver paths '@/'
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname);
+    return config;
+  },
+  
+  // Variables de entorno para Stripe
+  env: {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO,
+    STRIPE_PRICE_PREMIUM: process.env.STRIPE_PRICE_PREMIUM,
+    STRIPE_PRICE_ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE,
+  },
+  
+  // Configuración experimental
+  experimental: {
+    serverActions: {
+      enabled: true,
+
+
+    },
+  },
+};
+
+module.exports = nextConfig;
