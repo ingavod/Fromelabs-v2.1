@@ -43,3 +43,9 @@ Thumbs.db
 # Prisma
 prisma/migrations/.env.save
 .env*
+*.save
+
+# Backups
+*.sql
+*.tar.gz
+*backup*

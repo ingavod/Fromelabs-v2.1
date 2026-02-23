@@ -47,7 +47,7 @@ export default function ChatPage() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [currentConversationTitle, setCurrentConversationTitle] = useState<string>('')
 
-  const [usage, setUsage] = useState({ used: 0, limit: 50, plan: 'FREE' })
+  const [usage, setUsage] = useState({ used: 0, limit: 10, plan: 'FREE' })
   const [searchQuery, setSearchQuery] = useState('')
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
 
@@ -67,10 +67,31 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    checkFirstLogin()
     loadProjects()
     loadConversations()
     loadUsage()
   }, [])
+
+  const checkFirstLogin = async () => {
+    if (!session?.user) return
+    
+    // Check si ya visitó pricing (usando localStorage)
+    const hasVisitedPricing = localStorage.getItem('hasVisitedPricing')
+    if (hasVisitedPricing) return
+    
+    try {
+      const res = await fetch('/api/chat?action=usage')
+      const data = await res.json()
+      
+      // Si nunca ha enviado mensajes Y no ha visitado pricing
+      if (data.usage?.used === 0) {
+        router.push('/pricing')
+      }
+    } catch (error) {
+      console.error('Error checking first login:', error)
+    }
+  } 
 
   useEffect(() => {
     loadConversations()

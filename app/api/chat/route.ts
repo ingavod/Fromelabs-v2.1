@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 import { checkUserUsage, sendUsageAlert } from '@/lib/usage-alerts'
+import MemoryService from '@/src/services/memoryService'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,7 +14,7 @@ const anthropic = new Anthropic({
 })
 
 const PLAN_LIMITS: Record<string, number> = {
-  FREE: 50,
+  FREE: 10,
   PRO: 500,
   PREMIUM: 2000,
   ENTERPRISE: 10000,
@@ -234,13 +235,25 @@ export async function POST(req: Request) {
             const maxRetries = 3
             let retryCount = 0
             
+            // MEMORIA: Construir contexto del usuario
+            const memoryService = new MemoryService()
+            const userContext = await memoryService.buildContextForClaude(user.id)
+            
+            // MEMORIA: Extraer información del mensaje actual
+            const userMessage = typeof messages[messages.length - 1].content === 'string'
+              ? messages[messages.length - 1].content
+              : lastContent
+            await memoryService.extractAndSaveFromMessage(user.id, userMessage, conversationId)
+
             while (retryCount < maxRetries) {
               try {
                 messageStream = await anthropic.messages.stream({
                   model: 'claude-sonnet-4-20250514',
                   max_tokens: 8192,
+                  system: userContext || undefined, // Añadir contexto de memoria
                   messages: apiMessages,
                 })
+
                 break // Éxito, salir del loop de retry
               } catch (error: any) {
                 const isOverloaded = error?.error?.type === 'overloaded_error' || 

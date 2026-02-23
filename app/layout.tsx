@@ -14,8 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "From E Labs - AI Assistant",
-  description: "Powered by Claude Sonnet 4.5",
+  title: "FROM E SYSTEMS - Cognitive Counterpart",
+  description: "Tu compañero cognitivo potenciado por Claude Sonnet 4.5",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

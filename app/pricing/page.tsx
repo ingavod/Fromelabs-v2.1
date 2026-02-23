@@ -35,6 +35,21 @@ const COUNTRIES = [
 
 const PLANS = [
   {
+    id: 'FREE',
+    name: 'Free',
+    price: '€0',
+    period: 'gratis para siempre',
+    messages: 10,
+    features: [
+      '10 mensajes mensuales',
+      'From E Labs',
+      'Historial de 7 días',
+      'Soporte por email',
+      'Acceso básico',
+    ],
+    popular: false,
+  },
+  {
     id: 'PRO',
     name: 'Pro',
     price: '€19.99',
@@ -88,7 +103,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
   const [showBillingModal, setShowBillingModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]) // España por defecto
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
   const [billingData, setBillingData] = useState({
     phone: '',
     identification: '',
@@ -99,6 +114,18 @@ export default function PricingPage() {
   const [billingErrors, setBillingErrors] = useState<Record<string, string>>({})
 
   const handleSelectPlan = async (planId: string) => {
+    
+   if (planId === 'FREE') {
+      if (!session) {
+        router.push('/register')
+      } else {
+        // Marcar que ya visitó pricing
+        localStorage.setItem('hasVisitedPricing', 'true')
+        router.push('/chat')
+      }
+      return
+    }
+
     if (planId === 'ENTERPRISE') {
       window.location.href = 'mailto:support@fromelabs.com?subject=Enterprise Plan'
       return
@@ -109,7 +136,6 @@ export default function PricingPage() {
       return
     }
 
-    // Abrir modal de facturación
     setSelectedPlan(planId)
     setShowBillingModal(true)
     setBillingErrors({})
@@ -144,7 +170,6 @@ export default function PricingPage() {
     setLoading(selectedPlan)
 
     try {
-      // Guardar datos de facturación con prefijo y país
       const updateRes = await fetch('/api/user/billing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,7 +186,6 @@ export default function PricingPage() {
         return
       }
 
-      // Crear sesión de pago
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,7 +214,7 @@ export default function PricingPage() {
         background: C.surface
       }}>
         <div style={{
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto',
           padding: '20px 32px',
           display: 'flex',
@@ -203,7 +227,7 @@ export default function PricingPage() {
               From E Labs
             </h1>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => router.push('/')}
@@ -267,7 +291,7 @@ export default function PricingPage() {
 
       {/* Hero */}
       <div style={{
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
         padding: '64px 32px',
         textAlign: 'center'
@@ -288,14 +312,14 @@ export default function PricingPage() {
         </p>
       </div>
 
-      {/* Plans Grid */}
+      {/* Plans Grid - 4 columnas */}
       <div style={{
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
         padding: '0 32px 64px',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '24px'
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '20px'
       }}>
         {PLANS.map((plan) => (
           <div
@@ -304,7 +328,7 @@ export default function PricingPage() {
               background: C.surface,
               border: plan.popular ? `2px solid ${C.navy}` : `1px solid ${C.border}`,
               borderRadius: '12px',
-              padding: '32px 24px',
+              padding: '32px 20px',
               position: 'relative',
               transition: 'transform 0.2s',
             }}
@@ -414,7 +438,8 @@ export default function PricingPage() {
                 }
               }}
             >
-              {loading === plan.id ? 'Procesando...' : 
+              {loading === plan.id ? 'Procesando...' :
+               plan.id === 'FREE' ? (session ? 'Ir al Chat' : 'Registrarse Gratis') :
                plan.id === 'ENTERPRISE' ? 'Contactar' :
                session ? 'Seleccionar Plan' : 'Iniciar Sesión'}
             </button>
@@ -545,7 +570,6 @@ export default function PricingPage() {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Country Selector */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', color: C.textSub }}>
                   País *
@@ -576,7 +600,6 @@ export default function PricingPage() {
                 </select>
               </div>
 
-              {/* Phone */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', color: C.textSub }}>
                   Teléfono *
@@ -621,7 +644,6 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* ID */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', color: C.textSub }}>
                   {selectedCountry.idLabel} *
@@ -649,7 +671,6 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* Address */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', color: C.textSub }}>
                   Dirección *
@@ -677,7 +698,6 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* City & Postal Code */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', color: C.textSub }}>
@@ -734,7 +754,6 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              {/* Buttons */}
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                 <button
                   onClick={() => {
