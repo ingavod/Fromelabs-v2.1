@@ -113,6 +113,18 @@ export default function LoginPage() {
         <p style={{ textAlign: 'center', color: '#334155', fontSize: '0.72rem', marginTop: '20px' }}>
           Al iniciar sesión aceptas nuestros Términos de Servicio y Política de Privacidad
         </p>
+
+        {/* Powered by Claude */}
+        <div style={{ textAlign: 'center', marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <span style={{ color: '#475569', fontSize: '0.7rem' }}>Powered by</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" fill="#CC9B7A"/>
+            <path d="M16.5 7.5C16.5 8.32843 15.8284 9 15 9C14.1716 9 13.5 8.32843 13.5 7.5C13.5 6.67157 14.1716 6 15 6C15.8284 6 16.5 6.67157 16.5 7.5Z" fill="#1F1F1F"/>
+            <path d="M9 18C11.2091 18 13 16.2091 13 14C13 11.7909 11.2091 10 9 10C6.79086 10 5 11.7909 5 14C5 16.2091 6.79086 18 9 18Z" fill="#1F1F1F"/>
+            <path d="M19 14C19 16.7614 16.7614 19 14 19C11.2386 19 9 16.7614 9 14C9 11.2386 11.2386 9 14 9C16.7614 9 19 11.2386 19 14Z" fill="#1F1F1F"/>
+          </svg>
+          <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: '600' }}>Claude</span>
+        </div>
       </div>
     </div>
   )

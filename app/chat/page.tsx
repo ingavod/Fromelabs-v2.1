@@ -75,23 +75,21 @@ export default function ChatPage() {
 
   const checkFirstLogin = async () => {
     if (!session?.user) return
-    
-    // Check si ya visitó pricing (usando localStorage)
+
     const hasVisitedPricing = localStorage.getItem('hasVisitedPricing')
     if (hasVisitedPricing) return
-    
+
     try {
       const res = await fetch('/api/chat?action=usage')
       const data = await res.json()
-      
-      // Si nunca ha enviado mensajes Y no ha visitado pricing
+
       if (data.usage?.used === 0) {
         router.push('/pricing')
       }
     } catch (error) {
       console.error('Error checking first login:', error)
     }
-  } 
+  }
 
   useEffect(() => {
     loadConversations()
@@ -489,7 +487,7 @@ export default function ChatPage() {
               <button onClick={() => router.push('/account')} className="flex-1 px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded transition-colors">Cuenta</button>
               {session?.user?.isAdmin && <button onClick={() => router.push('/admin')} className="flex-1 px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded transition-colors">Admin</button>}
             </div>
-            <button onClick={async () => { await fetch('/api/auth/signout-custom', { method: 'POST' }); window.location.href = '/login' }} className="w-full px-3 py-1.5 mt-2 text-xs bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded transition-colors">Cerrar sesión</button>
+            <button onClick={async () => { await fetch('/api/auth/signout', { method: 'POST' }); window.location.href = '/signout'; }} className="w-full px-3 py-1.5 mt-2 text-xs bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded transition-colors">Cerrar sesión</button>
           </div>
         </div>
       )}
@@ -500,8 +498,8 @@ export default function ChatPage() {
             <button onClick={() => setShowSidebar(!showSidebar)} className="p-2 hover:bg-gray-800 rounded transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            {currentConversationId && (isEditingTitle ? 
-              <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} onBlur={handleRenameConversation} onKeyDown={(e) => e.key === 'Enter' && handleRenameConversation()} className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-600" autoFocus /> : 
+            {currentConversationId && (isEditingTitle ?
+              <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} onBlur={handleRenameConversation} onKeyDown={(e) => e.key === 'Enter' && handleRenameConversation()} className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-600" autoFocus /> :
               <button onClick={() => { setIsEditingTitle(true); setEditedTitle(currentConversationTitle) }} className="text-sm hover:text-blue-400 transition-colors">{currentConversationTitle}</button>
             )}
           </div>
@@ -530,7 +528,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <div 
+        <div
           className={`flex-1 overflow-y-auto p-4 ${isDragging ? 'bg-blue-900/10 border-2 border-dashed border-blue-500' : ''}`}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }}
@@ -618,6 +616,9 @@ export default function ChatPage() {
               )}
             </div>
           </form>
+          <p className="text-xs text-gray-500 text-center mt-2 max-w-6xl mx-auto">
+            From E es IA y puede cometer errores. Por favor, verifica las respuestas.
+          </p>
         </div>
       </div>
 

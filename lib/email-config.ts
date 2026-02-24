@@ -1,12 +1,6 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { Resend } from 'resend';
 
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmail({
   to,
@@ -20,44 +14,42 @@ export async function sendEmail({
   text?: string
 }) {
   try {
-    const command = new SendEmailCommand({
-      Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@fromelabs.com',
-      Destination: {
-        ToAddresses: [to],
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Html: {
-            Data: html,
-            Charset: 'UTF-8',
-          },
-          Text: text ? {
-            Data: text,
-            Charset: 'UTF-8',
-          } : undefined,
-        },
-      },
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'From E Labs <noreply@fromelabs.com>',
+      to: [to],
+      subject,
+      html,
+      text,
     });
 
-    const response = await sesClient.send(command);
-    console.log('✅ Email enviado con AWS SES:', response.MessageId);
-    return { success: true, messageId: response.MessageId };
+    if (error) {
+      console.error('❌ Error enviando email con Resend:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Email enviado con Resend:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error: any) {
-    console.error('❌ Error enviando email con AWS SES:', error);
+    console.error('❌ Error enviando email con Resend:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function verifyEmailConnection() {
-  console.log('✅ AWS SES SDK configurado');
-  return true;
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY no configurada');
+      return false;
+    }
+    console.log('✅ Resend configurado correctamente');
+    return true;
+  } catch (error) {
+    console.error('❌ Error verificando Resend:', error);
+    return false;
+  }
 }
 
 export const transporter = {
-  verify: async () => true,
+  verify: async () => verifyEmailConnection(),
   sendMail: async (options: any) => sendEmail(options)
 };
