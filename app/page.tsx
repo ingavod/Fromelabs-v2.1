@@ -23,7 +23,7 @@ export default function HomePage() {
 
   const mainActions = [
     {
-      title: 'Chat con IA',
+      title: 'Cognitive Counterpart',
       description: 'Conversa con From E',
       action: () => router.push(session ? '/chat' : '/login'),
       color: C.navy,
@@ -103,7 +103,7 @@ export default function HomePage() {
             fontSize: '1rem',
             margin: 0
           }}>
-            Tu asistente de IA
+            Tu Cognitive Counterpart
           </p>
         </div>
 

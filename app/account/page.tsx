@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import SessionGuard from '@/components/session/SessionGuard'
 
 interface UserData {
   id: string
@@ -12,277 +13,203 @@ interface UserData {
   plan: string
   messagesUsed: number
   messagesLimit: number
-  subscriptionStatus: string
-  stripeCustomerId: string | null
   createdAt: string
 }
 
+const planFeatures = {
+  FREE: ['50 mensajes/mes', 'Memoria 7 días', 'Modelos básicos'],
+  STARTER: ['500 mensajes/mes', 'Memoria 30 días', 'Prioridad normal'],
+  PRO: ['2,000 mensajes/mes', 'API & Webhooks', 'Memoria ilimitada', 'Sin anuncios'],
+  BUSINESS: ['10,000 mensajes/mes', 'Multi-usuario (5)', 'Analytics avanzado', 'SLA 99.5%'],
+  ENTERPRISE: ['Mensajes ilimitados', 'On-premise', 'SLA 99.9%', 'Soporte 24/7']
+}
+
+const planPrices = {
+  FREE: '0€/mes',
+  STARTER: '9€/mes',
+  PRO: '29€/mes',
+  BUSINESS: '99€/mes',
+  ENTERPRISE: 'Personalizado'
+}
+
 export default function AccountPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [canceling, setCanceling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadUserData()
-  }, [])
+    if (status === 'unauthenticated') {
+      router.push('/login')
+    }
+  }, [status, router])
 
-  const loadUserData = async () => {
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchUserData()
+    }
+  }, [status])
+
+  const fetchUserData = async () => {
     try {
-      const res = await fetch('/api/user/account')
-      const data = await res.json()
+      const response = await fetch('/api/user/profile')
+      if (!response.ok) throw new Error('Error al cargar datos del usuario')
+      const data = await response.json()
       setUserData(data)
-    } catch (error) {
-      console.error('Error loading user data:', error)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCancelSubscription = async () => {
-    if (!confirm('¿Estás seguro de cancelar tu suscripción? Perderás acceso a las funciones premium al final del período de facturación.')) {
-      return
-    }
-
-    setCanceling(true)
-    try {
-      const res = await fetch('/api/user/cancel-subscription', {
-        method: 'POST',
-      })
-
-      if (res.ok) {
-        alert('Suscripción cancelada exitosamente')
-        await loadUserData()
-      } else {
-        alert('Error al cancelar la suscripción')
-      }
-    } catch (error) {
-      console.error('Error canceling subscription:', error)
-      alert('Error al cancelar la suscripción')
-    } finally {
-      setCanceling(false)
-    }
-  }
-
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-gray-400">Cargando...</div>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Cargando tu cuenta...</p>
+        </div>
       </div>
     )
   }
 
-  if (!userData) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-red-400">Error al cargar datos de usuario</div>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => router.push('/chat')}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+          >
+            Volver al Chat
+          </button>
+        </div>
       </div>
     )
   }
 
-  const planColors = {
-    FREE: 'bg-gray-800 text-gray-300',
-    PRO: 'bg-blue-900/20 text-blue-400 border border-blue-800',
-    PREMIUM: 'bg-purple-900/20 text-purple-400 border border-purple-800',
-    ENTERPRISE: 'bg-yellow-900/20 text-yellow-400 border border-yellow-800',
-  }
+  if (!userData) return null
 
   const usagePercentage = (userData.messagesUsed / userData.messagesLimit) * 100
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+    <SessionGuard>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900">
+      <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-from-e.png" alt="Frome Labs" width={40} height={40} />
-            <h1 className="text-2xl font-semibold">Mi Cuenta</h1>
-          </div>
+        <div className="mb-8">
           <button
             onClick={() => router.push('/chat')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            className="text-purple-400 hover:text-purple-300 mb-6 inline-flex items-center"
           >
-            Ir al Chat
+            ← Volver al Chat
           </button>
+          <h1 className="text-4xl font-bold text-white mb-2">Mi Cuenta</h1>
+          <p className="text-gray-400">Gestiona tu perfil y suscripción</p>
         </div>
 
-        {/* Account Info */}
-        <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Información de la Cuenta</h2>
-          
-          <div className="space-y-3">
-            <div>
-              <div className="text-sm text-gray-400">Nombre</div>
-              <div className="text-white">{userData.name || 'Sin nombre'}</div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-400">Email</div>
-              <div className="text-white">{userData.email}</div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-400">Miembro desde</div>
-              <div className="text-white">
-                {new Date(userData.createdAt).toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
+        {/* Información del Usuario */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 mb-6 border border-gray-700">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">
+                  {userData.name?.charAt(0).toUpperCase() || userData.email.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">{userData.name || 'Usuario'}</h2>
+                <p className="text-gray-400">{userData.email}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Miembro desde {new Date(userData.createdAt).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
               </div>
             </div>
+            <div className="text-right">
+              <span className="inline-block px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-semibold">
+                Plan {userData.plan}
+              </span>
+              <p className="text-gray-400 text-sm mt-2">{planPrices[userData.plan as keyof typeof planPrices]}</p>
+            </div>
           </div>
         </div>
 
-        {/* Current Plan */}
-        <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Plan Actual</h2>
-            <span className={`px-3 py-1 rounded-lg font-medium ${planColors[userData.plan as keyof typeof planColors]}`}>
-              {userData.plan}
-            </span>
-          </div>
-
-          {userData.plan !== 'FREE' && (
-            <div className="mb-4">
-              <div className="text-sm text-gray-400 mb-1">Estado de la suscripción</div>
-              <div className="text-white capitalize">{userData.subscriptionStatus}</div>
-            </div>
-          )}
-
-          {/* Usage Bar */}
+        {/* Uso de Mensajes */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 mb-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-4">Uso de Mensajes</h3>
           <div className="mb-4">
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-400">Mensajes utilizados</span>
-              <span className="text-white font-medium">
-                {userData.messagesUsed} / {userData.messagesLimit}
+              <span className="text-gray-400">
+                {userData.messagesUsed} de {userData.messagesLimit === -1 ? '∞' : userData.messagesLimit} mensajes
+              </span>
+              <span className="text-gray-400">
+                {userData.messagesLimit === -1 ? '∞' : `${Math.round(usagePercentage)}%`}
               </span>
             </div>
-            <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
               <div
-                className={`h-full transition-all ${
-                  usagePercentage >= 90 ? 'bg-red-500' :
-                  usagePercentage >= 70 ? 'bg-yellow-500' :
-                  'bg-blue-500'
+                className={`h-full transition-all duration-500 ${
+                  usagePercentage > 90 ? 'bg-red-500' : usagePercentage > 70 ? 'bg-yellow-500' : 'bg-purple-500'
                 }`}
-                style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+                style={{ width: userData.messagesLimit === -1 ? '100%' : `${Math.min(usagePercentage, 100)}%` }}
               />
             </div>
-            {usagePercentage >= 90 && (
-              <p className="text-sm text-red-400 mt-2">
-                ⚠️ Estás cerca del límite de mensajes. Considera actualizar tu plan.
-              </p>
-            )}
           </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/pricing')}
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              {userData.plan === 'FREE' ? 'Actualizar Plan' : 'Cambiar Plan'}
-            </button>
-            
-            {userData.plan !== 'FREE' && userData.subscriptionStatus === 'active' && (
-              <button
-                onClick={handleCancelSubscription}
-                disabled={canceling}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {canceling ? 'Cancelando...' : 'Cancelar Suscripción'}
-              </button>
-            )}
-          </div>
+          {userData.messagesLimit !== -1 && usagePercentage > 80 && (
+            <p className="text-yellow-400 text-sm mt-2">
+              ⚠️ Te estás acercando al límite de tu plan. Considera actualizar para seguir disfrutando del servicio.
+            </p>
+          )}
         </div>
 
-        {/* Plan Features */}
-        <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Características de tu Plan</h2>
-          
-          <ul className="space-y-2">
-            {userData.plan === 'FREE' && (
-              <>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  50 mensajes mensuales
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  From E Labs
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Historial de conversaciones
-                </li>
-              </>
-            )}
-            
-            {userData.plan === 'PRO' && (
-              <>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  500 mensajes mensuales
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  From E Labs
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Historial ilimitado
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Soporte prioritario
-                </li>
-              </>
-            )}
-            
-            {userData.plan === 'PREMIUM' && (
-              <>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  2,000 mensajes mensuales
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Todo de Pro
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Soporte VIP
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Acceso anticipado a funciones
-                </li>
-              </>
-            )}
-            
-            {userData.plan === 'ENTERPRISE' && (
-              <>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  10,000 mensajes mensuales
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Todo de Premium
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Soporte dedicado 24/7
-                </li>
-                <li className="flex items-center gap-2 text-gray-300">
-                  <span className="text-green-400">✓</span>
-                  Integraciones personalizadas
-                </li>
-              </>
-            )}
+        {/* Características del Plan */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 mb-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-4">Características de tu Plan</h3>
+          <ul className="space-y-3">
+            {planFeatures[userData.plan as keyof typeof planFeatures]?.map((feature, index) => (
+              <li key={index} className="flex items-center text-gray-300">
+                <svg className="w-5 h-5 text-purple-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {feature}
+              </li>
+            ))}
           </ul>
         </div>
+
+        {/* Actualizar Plan */}
+        {userData.plan !== 'ENTERPRISE' && (
+          <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 rounded-2xl p-8 border border-purple-700 mb-6">
+            <h3 className="text-xl font-semibold text-white mb-2">¿Necesitas más?</h3>
+            <p className="text-gray-400 mb-4">
+              Actualiza tu plan para obtener más mensajes, funciones avanzadas y soporte prioritario.
+            </p>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition transform hover:scale-105"
+            >
+              Ver Planes Disponibles
+            </button>
+          </div>
+        )}
+
+        {/* Legal disclaimer */}
+        <p className="text-center text-[11px] text-gray-500 mt-8 mb-4 px-4">
+          Al usar FromE, aceptas nuestras{' '}
+          <a href="/legal/condiciones" className="underline hover:text-gray-400">condiciones de servicio</a>
+          {' '}y{' '}
+          <a href="/legal/uso-aceptable" className="underline hover:text-gray-400">política de uso aceptable</a>,{' '}
+          y confirmas que has leído nuestra{' '}
+          <a href="/legal/privacidad" className="underline hover:text-gray-400">política de privacidad</a>.
+        </p>
       </div>
-    </div>
+    </SessionGuard>
   )
 }

@@ -8,39 +8,51 @@ datasource db {
 }
 
 model User {
-  id                   String         @id @default(cuid())
-  email                String         @unique
-  name                 String?
-  passwordHash         String
-  emailVerified        Boolean        @default(false)
-  role                 UserRole       @default(USER)
-  isAdmin              Boolean        @default(false)
-  isActive             Boolean        @default(true)
-  isBlocked            Boolean        @default(false)
-  blockedUntil         DateTime?
-  plan                 String         @default("FREE")
-  stripeCustomerId     String?        @unique
-  stripeSubscriptionId String?        @unique
-  subscriptionStatus   String         @default("INACTIVE")
-  messagesUsed         Int            @default(0)
-  messagesLimit        Int            @default(50)
-  tokensUsed           Int            @default(0)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  lastLoginAt          DateTime?
-  address              String?
-  city                 String?
-  country              String?
-  identification       String?
-  phone                String?
-  postalCode           String?
-  imagesUsed           Int?           @default(0)
-  lastName             String?
-  conversations        Conversation[]
-  loginAttempts        LoginAttempt[]
-  projects             Project[]
-  sessions             Session[]
-  usage                Usage[]
+  id                     String                 @id @default(cuid())
+  email                  String                 @unique
+  name                   String?
+  passwordHash           String
+  emailVerified          Boolean                @default(false)
+  role                   UserRole               @default(USER)
+  isAdmin                Boolean                @default(false)
+  isActive               Boolean                @default(true)
+  isBlocked              Boolean                @default(false)
+  blockedUntil           DateTime?
+  plan                   String                 @default("FREE")
+  stripeCustomerId       String?                @unique
+  stripeSubscriptionId   String?                @unique
+  subscriptionStatus     String                 @default("INACTIVE")
+  messagesUsed           Int                    @default(0)
+  messagesLimit          Int                    @default(50)
+  tokensUsed             Int                    @default(0)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  lastLoginAt            DateTime?
+  address                String?
+  city                   String?
+  country                String?
+  identification         String?
+  phone                  String?
+  postalCode             String?
+  imagesUsed             Int?                   @default(0)
+  lastName               String?
+  
+  // Campos para sistema de sesión única - AÑADIDOS
+  activeSessionToken     String?
+  activeSessionCreatedAt DateTime?
+  activeSessionDevice    String?
+  
+  // Relaciones
+  conversations          Conversation[]
+  loginAttempts          LoginAttempt[]
+  projects               Project[]
+  sessions               Session[]
+  usage                  Usage[]
+  conversation_context   conversation_context[]
+  user_memory            user_memory[]
+  user_preferences       user_preferences?
+  
+  @@index([activeSessionToken])
 }
 
 model VerificationToken {
@@ -90,15 +102,16 @@ model Project {
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  title     String    @default("Nueva conversación")
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  projectId String?
-  project   Project?  @relation(fields: [projectId], references: [id])
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
+  id                   String                 @id @default(cuid())
+  title                String                 @default("Nueva conversación")
+  userId               String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  projectId            String?
+  project              Project?               @relation(fields: [projectId], references: [id])
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages             Message[]
+  conversation_context conversation_context[]
 
   @@index([userId])
   @@index([projectId])
@@ -139,6 +152,60 @@ model LoginAttempt {
   user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([email])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model conversation_context {
+  id              Int           @id @default(autoincrement())
+  user_id         String
+  conversation_id String?
+  context_type    String        @db.VarChar(50)
+  context_data    Json
+  relevance_score Decimal?      @default(1.0) @db.Decimal(3, 2)
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
+  last_accessed   DateTime?     @default(now()) @db.Timestamp(6)
+  Conversation    Conversation? @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_conversation_context_conv")
+  User            User          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_conversation_context_user")
+
+  @@index([conversation_id], map: "idx_conversation_context_conv")
+  @@index([context_data], map: "idx_conversation_context_data", type: Gin)
+  @@index([context_type], map: "idx_conversation_context_type")
+  @@index([user_id], map: "idx_conversation_context_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_memory {
+  id           Int       @id @default(autoincrement())
+  user_id      String
+  memory_key   String    @db.VarChar(255)
+  memory_value String
+  memory_type  String?   @default("fact") @db.VarChar(50)
+  confidence   Decimal?  @default(1.0) @db.Decimal(3, 2)
+  source       String?   @db.VarChar(100)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  expires_at   DateTime? @db.Timestamp(6)
+  metadata     Json?     @default("{}")
+  User         User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_memory_user")
+
+  @@unique([user_id, memory_key], map: "unique_user_memory")
+  @@index([created_at(sort: Desc)], map: "idx_user_memory_created")
+  @@index([memory_key], map: "idx_user_memory_key")
+  @@index([metadata], map: "idx_user_memory_metadata", type: Gin)
+  @@index([memory_type], map: "idx_user_memory_type")
+  @@index([user_id], map: "idx_user_memory_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_preferences {
+  id          Int       @id @default(autoincrement())
+  user_id     String    @unique
+  preferences Json      @default("{}")
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  User        User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_preferences_user")
+
+  @@index([preferences], map: "idx_user_preferences_data", type: Gin)
+  @@index([user_id], map: "idx_user_preferences_user")
 }
 
 enum UserRole {

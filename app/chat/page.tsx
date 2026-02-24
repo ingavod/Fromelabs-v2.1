@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { exportAsText, exportAsMarkdown, exportAsJSON } from '@/lib/export-utils'
+import SessionGuard from '@/components/session/SessionGuard'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -423,6 +424,7 @@ export default function ChatPage() {
   const usagePercentage = usage ? (usage.used / usage.limit) * 100 : 0
 
   return (
+    <SessionGuard>
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden">
       {showSidebar && (
         <div className="w-64 bg-[#1a1a1a] border-r border-gray-800 flex flex-col">
@@ -634,6 +636,6 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-    </div>
+    </SessionGuard>
   )
 }
