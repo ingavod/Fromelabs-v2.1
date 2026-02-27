@@ -110,8 +110,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', color: '#334155', fontSize: '0.72rem', marginTop: '20px' }}>
-          Al iniciar sesión aceptas nuestros Términos de Servicio y Política de Privacidad
+        {/* Frase legal con links */}
+        <p style={{ textAlign: 'center', color: '#475569', fontSize: '0.72rem', marginTop: '20px', lineHeight: '1.5' }}>
+          Al enviar un mensaje a FromE, un Cognitive Counterpart, aceptas nuestras{' '}
+          <a href="/legal/condiciones" style={{ color: '#64748b', textDecoration: 'underline' }}>condiciones</a>, nuestra{' '}
+          <a href="/legal/uso-aceptable" style={{ color: '#64748b', textDecoration: 'underline' }}>política de uso aceptable</a>{' '}
+          y confirmas que has leído nuestra{' '}
+          <a href="/legal/privacidad" style={{ color: '#64748b', textDecoration: 'underline' }}>política de privacidad</a>.
         </p>
 
         {/* Powered by Claude */}

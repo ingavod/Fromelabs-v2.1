@@ -70,9 +70,9 @@ const PLANS = [
     name: 'Premium',
     price: '€49.99',
     period: 'por mes',
-    messages: 2000,
+    messages: 1200,
     features: [
-      '2,000 mensajes mensuales',
+      '1,200 mensajes mensuales',
       'From E Labs',
       'Historial ilimitado',
       'Soporte VIP',
@@ -85,9 +85,9 @@ const PLANS = [
     name: 'Enterprise',
     price: '€99.99',
     period: 'por mes',
-    messages: 10000,
+    messages: 4500,
     features: [
-      '10,000 mensajes mensuales',
+      '4,500 mensajes mensuales',
       'From E Labs',
       'Historial ilimitado',
       'Soporte 24/7',
@@ -308,7 +308,7 @@ export default function PricingPage() {
           color: C.textSub,
           margin: 0
         }}>
-          Elige el plan perfecto para ti
+          Cancela en cualquier momento. Sin compromisos.
         </p>
       </div>
 
@@ -807,9 +807,21 @@ export default function PricingPage() {
         <p style={{
           color: C.textMuted,
           fontSize: '0.875rem',
-          margin: 0
+          margin: '0 0 12px 0'
         }}>
-          © 2026 From E Labs. Todos los derechos reservados.
+          © 2026 FROM E SYSTEMS™. Todos los derechos reservados.
+        </p>
+        <p style={{
+          color: '#475569',
+          fontSize: '0.72rem',
+          margin: 0,
+          lineHeight: '1.5'
+        }}>
+          <a href="/legal/condiciones" style={{ color: '#64748b', textDecoration: 'underline' }}>Condiciones</a>
+          {' · '}
+          <a href="/legal/privacidad" style={{ color: '#64748b', textDecoration: 'underline' }}>Privacidad</a>
+          {' · '}
+          <a href="/legal/uso-aceptable" style={{ color: '#64748b', textDecoration: 'underline' }}>Uso Aceptable</a>
         </p>
       </div>
     </div>

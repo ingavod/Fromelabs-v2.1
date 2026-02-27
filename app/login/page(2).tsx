@@ -42,11 +42,8 @@ export default function LoginPage() {
 
         {/* Logo y título */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{ background: '#111', border: '1px solid #222', padding: '8px', borderRadius: '10px' }}>
-              <Image src="/logo-from-e.png" alt="From E Labs" width={52} height={52} style={{ display: 'block' }} />
-            </div>
-            <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#f1f5f9' }}>From E Labs</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+            <Image src="/logo-frome40.png" alt="From E" width={160} height={53} style={{ display: 'block' }} />
           </div>
           <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Inicia sesión para continuar</p>
         </div>
