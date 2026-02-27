@@ -126,11 +126,6 @@ export default function PricingPage() {
       return
     }
 
-    if (planId === 'ENTERPRISE') {
-      window.location.href = 'mailto:support@fromelabs.com?subject=Enterprise Plan'
-      return
-    }
-
     if (!session) {
       router.push('/login')
       return
@@ -296,6 +291,18 @@ export default function PricingPage() {
         padding: '64px 32px',
         textAlign: 'center'
       }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginBottom: '32px'
+        }}>
+          <Image 
+            src="/logo-frome40.png" 
+            alt="From E" 
+            width={200} 
+            height={67}
+          />
+        </div>
         <h2 style={{
           fontSize: '2.5rem',
           fontWeight: '700',
@@ -440,7 +447,6 @@ export default function PricingPage() {
             >
               {loading === plan.id ? 'Procesando...' :
                plan.id === 'FREE' ? (session ? 'Ir al Chat' : 'Registrarse Gratis') :
-               plan.id === 'ENTERPRISE' ? 'Contactar' :
                session ? 'Seleccionar Plan' : 'Iniciar Sesión'}
             </button>
           </div>
