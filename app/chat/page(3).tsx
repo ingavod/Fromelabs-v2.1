@@ -69,7 +69,6 @@ export default function ChatPage() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const dropZoneRef = useRef<HTMLDivElement>(null)
 
   // Auto-resize textarea when input changes
   useEffect(() => {
@@ -86,75 +85,6 @@ export default function ChatPage() {
       textareaRef.current.style.height = `${Math.max(60, textareaRef.current.scrollHeight)}px`
     }
   }, [attachedFiles])
-
-  useEffect(() => {
-    const dropZone = dropZoneRef.current
-    if (!dropZone) return
-
-    const handleDrop = async (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-      
-      const files = e.dataTransfer?.files
-      if (!files || files.length === 0) return
-
-      const fileArray = Array.from(files)
-      const processed: AttachedFile[] = []
-
-      for (const file of fileArray) {
-        if (file.type.startsWith('image/')) {
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-          processed.push({
-            id: crypto.randomUUID(),
-            name: file.name,
-            type: 'image',
-            data: dataUrl,
-          })
-        } else if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-          const content = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsText(file)
-          })
-          processed.push({
-            id: crypto.randomUUID(),
-            name: file.name,
-            type: 'document',
-            data: '',
-            content,
-          })
-        }
-      }
-
-      setAttachedFiles(prev => [...prev, ...processed])
-    }
-
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(true)
-    }
-
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault()
-      if (e.target === dropZone) setIsDragging(false)
-    }
-
-    dropZone.addEventListener('dragover', handleDragOver)
-    dropZone.addEventListener('dragleave', handleDragLeave)
-    dropZone.addEventListener('drop', handleDrop)
-
-    return () => {
-      dropZone.removeEventListener('dragover', handleDragOver)
-      dropZone.removeEventListener('dragleave', handleDragLeave)
-      dropZone.removeEventListener('drop', handleDrop)
-    }
-  }, [])
 
   useEffect(() => {
     checkFirstLogin()
@@ -379,6 +309,15 @@ export default function ChatPage() {
     setShowAttachMenu(false)
   }
 
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleFilesSelect(e.dataTransfer.files)
+    }
+  }
+
   const removeAttachedFile = (id: string) => {
     setAttachedFiles(prev => prev.filter(f => f.id !== id))
   }
@@ -540,8 +479,9 @@ export default function ChatPage() {
       {showSidebar && (
         <div className="w-64 bg-[#1a1a1a] border-r border-gray-800 flex flex-col">
           <div className="p-4 border-b border-gray-800">
-            <div className="mb-4">
-              <Image src="/logo-frome40.png" alt="From E" width={120} height={40} />
+            <div className="flex items-center gap-2 mb-4">
+              <Image src="/logo-from-e.png" alt="Logo" width={28} height={28} />
+              <span className="font-medium text-sm">From E Labs</span>
             </div>
             <button onClick={handleNewChat} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium">Nueva conversación</button>
           </div>
@@ -642,11 +582,13 @@ export default function ChatPage() {
         </div>
 
         <div
-          ref={dropZoneRef}
-          className="flex-1 overflow-y-auto p-4 relative"
+          className={`flex-1 overflow-y-auto p-4 ${isDragging ? 'bg-blue-900/10 border-2 border-dashed border-blue-500' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }}
+          onDrop={handleDrop}
         >
           {isDragging && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-900/20 backdrop-blur-sm border-2 border-dashed border-blue-500 pointer-events-none">
+            <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <svg className="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                 <p className="text-lg font-medium text-blue-400">Suelta tus archivos aquí</p>

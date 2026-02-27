@@ -103,7 +103,7 @@ export default function HomePage() {
             fontSize: '1rem',
             margin: 0
           }}>
-            Tu Cognitive Counterpart
+            Tu asistente de IA
           </p>
         </div>
 
@@ -175,16 +175,6 @@ export default function HomePage() {
               </p>
             </button>
           ))}
-        </div>
-
-        {/* Logo centrado */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginBottom: '48px'
-        }}>
-          <Image src="/logo-frome40.png" alt="From E" width={200} height={67} style={{ opacity: 0.7 }} />
         </div>
 
         {/* CTA if not logged in */}

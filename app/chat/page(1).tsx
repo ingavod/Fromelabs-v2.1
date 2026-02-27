@@ -4,12 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { exportAsText, exportAsMarkdown, exportAsJSON, exportAsPDF } from '@/lib/export-utils'
+import { exportAsText, exportAsMarkdown, exportAsJSON } from '@/lib/export-utils'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
-  files?: AttachedFile[]
 }
 
 interface Conversation {
@@ -62,99 +61,10 @@ export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false)
 
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
-  const [editingFileId, setEditingFileId] = useState<string | null>(null)
-  const [editingFileContent, setEditingFileContent] = useState<string>('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const dropZoneRef = useRef<HTMLDivElement>(null)
-
-  // Auto-resize textarea when input changes
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 200)
-      textareaRef.current.style.height = `${newHeight}px`
-    }
-  }, [input])
-
-  // Expand textarea when files are attached
-  useEffect(() => {
-    if (textareaRef.current && attachedFiles.length > 0) {
-      textareaRef.current.style.height = `${Math.max(60, textareaRef.current.scrollHeight)}px`
-    }
-  }, [attachedFiles])
-
-  useEffect(() => {
-    const dropZone = dropZoneRef.current
-    if (!dropZone) return
-
-    const handleDrop = async (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-      
-      const files = e.dataTransfer?.files
-      if (!files || files.length === 0) return
-
-      const fileArray = Array.from(files)
-      const processed: AttachedFile[] = []
-
-      for (const file of fileArray) {
-        if (file.type.startsWith('image/')) {
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-          processed.push({
-            id: crypto.randomUUID(),
-            name: file.name,
-            type: 'image',
-            data: dataUrl,
-          })
-        } else if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-          const content = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsText(file)
-          })
-          processed.push({
-            id: crypto.randomUUID(),
-            name: file.name,
-            type: 'document',
-            data: '',
-            content,
-          })
-        }
-      }
-
-      setAttachedFiles(prev => [...prev, ...processed])
-    }
-
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(true)
-    }
-
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault()
-      if (e.target === dropZone) setIsDragging(false)
-    }
-
-    dropZone.addEventListener('dragover', handleDragOver)
-    dropZone.addEventListener('dragleave', handleDragLeave)
-    dropZone.addEventListener('drop', handleDrop)
-
-    return () => {
-      dropZone.removeEventListener('dragover', handleDragOver)
-      dropZone.removeEventListener('dragleave', handleDragLeave)
-      dropZone.removeEventListener('drop', handleDrop)
-    }
-  }, [])
 
   useEffect(() => {
     checkFirstLogin()
@@ -379,52 +289,30 @@ export default function ChatPage() {
     setShowAttachMenu(false)
   }
 
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleFilesSelect(e.dataTransfer.files)
+    }
+  }
+
   const removeAttachedFile = (id: string) => {
     setAttachedFiles(prev => prev.filter(f => f.id !== id))
-  }
-
-  const openFileEditor = (file: AttachedFile) => {
-    setEditingFileId(file.id)
-    setEditingFileContent(file.content || '')
-  }
-
-  const saveFileEdit = () => {
-    if (!editingFileId) return
-    setAttachedFiles(prev => prev.map(f => 
-      f.id === editingFileId ? { ...f, content: editingFileContent } : f
-    ))
-    setEditingFileId(null)
-    setEditingFileContent('')
-  }
-
-  const createThreadFromFile = async (file: AttachedFile) => {
-    // Create new conversation
-    handleNewChat()
-    
-    // Add file to new conversation
-    setAttachedFiles([file])
-    
-    // Set initial message
-    setInput(`Analiza este archivo: ${file.name}`)
-    
-    // Focus on textarea
-    textareaRef.current?.focus()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
 
-    const currentFiles = [...attachedFiles]
-    const userMessage: Message = { 
-      role: 'user', 
-      content: input.trim(),
-      files: currentFiles.length > 0 ? currentFiles : undefined
-    }
+    const userMessage: Message = { role: 'user', content: input.trim() }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setInput('')
     setLoading(true)
+
+    const currentFiles = [...attachedFiles]
     setAttachedFiles([])
 
     abortControllerRef.current = new AbortController()
@@ -520,12 +408,11 @@ export default function ChatPage() {
     navigator.clipboard.writeText(content)
   }
 
-  const handleExportConversation = async (format: 'txt' | 'md' | 'json' | 'pdf') => {
+  const handleExportConversation = (format: 'txt' | 'md' | 'json') => {
     const title = currentConversationTitle || 'Conversación'
     if (format === 'txt') exportAsText(messages, title)
     else if (format === 'md') exportAsMarkdown(messages, title)
-    else if (format === 'json') exportAsJSON(messages, title)
-    else if (format === 'pdf') await exportAsPDF(messages, title)
+    else exportAsJSON(messages, title)
     setShowExportMenu(false)
   }
 
@@ -540,8 +427,9 @@ export default function ChatPage() {
       {showSidebar && (
         <div className="w-64 bg-[#1a1a1a] border-r border-gray-800 flex flex-col">
           <div className="p-4 border-b border-gray-800">
-            <div className="mb-4">
-              <Image src="/logo-frome40.png" alt="From E" width={120} height={40} />
+            <div className="flex items-center gap-2 mb-4">
+              <Image src="/logo-from-e.png" alt="Logo" width={28} height={28} />
+              <span className="font-medium text-sm">From E Labs</span>
             </div>
             <button onClick={handleNewChat} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium">Nueva conversación</button>
           </div>
@@ -632,7 +520,6 @@ export default function ChatPage() {
                       <button onClick={() => handleExportConversation('txt')} className="w-full px-4 py-2.5 hover:bg-gray-800 transition-colors text-left text-sm">Exportar como TXT</button>
                       <button onClick={() => handleExportConversation('md')} className="w-full px-4 py-2.5 hover:bg-gray-800 transition-colors text-left text-sm">Exportar como Markdown</button>
                       <button onClick={() => handleExportConversation('json')} className="w-full px-4 py-2.5 hover:bg-gray-800 transition-colors text-left text-sm">Exportar como JSON</button>
-                      <button onClick={() => handleExportConversation('pdf')} className="w-full px-4 py-2.5 hover:bg-gray-800 transition-colors text-left text-sm">Exportar como PDF</button>
                     </div>
                   )}
                 </div>
@@ -642,11 +529,13 @@ export default function ChatPage() {
         </div>
 
         <div
-          ref={dropZoneRef}
-          className="flex-1 overflow-y-auto p-4 relative"
+          className={`flex-1 overflow-y-auto p-4 ${isDragging ? 'bg-blue-900/10 border-2 border-dashed border-blue-500' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }}
+          onDrop={handleDrop}
         >
           {isDragging && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-900/20 backdrop-blur-sm border-2 border-dashed border-blue-500 pointer-events-none">
+            <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <svg className="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                 <p className="text-lg font-medium text-blue-400">Suelta tus archivos aquí</p>
@@ -669,40 +558,6 @@ export default function ChatPage() {
                   {message.role === 'assistant' && <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex-shrink-0 flex items-center justify-center text-xs font-medium">C</div>}
                   <div className="flex flex-col max-w-[85%]">
                     <div className={`rounded-2xl px-4 py-3 ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-[#1a1a1a] text-gray-100 border border-gray-800'}`}>
-                      {message.files && message.files.length > 0 && (
-                        <div className="mb-3 flex flex-wrap gap-2">
-                          {message.files.map((file) => (
-                            <div key={file.id} className="group relative">
-                              {file.type === 'image' ? (
-                                <div className="relative">
-                                  <img src={file.data} alt={file.name} className="max-h-48 rounded border border-white/20" />
-                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-1">
-                                    <button type="button" onClick={() => openFileEditor(file)} className="p-1.5 bg-white/20 hover:bg-white/30 rounded" title="Ver imagen">
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    </button>
-                                    <button type="button" onClick={() => createThreadFromFile(file)} className="p-1.5 bg-white/20 hover:bg-white/30 rounded" title="Nuevo hilo">
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className={`flex items-center gap-2 px-3 py-2 ${message.role === 'user' ? 'bg-blue-700' : 'bg-gray-800'} rounded border ${message.role === 'user' ? 'border-white/20' : 'border-gray-700'}`}>
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                  <span className="text-sm">{file.name}</span>
-                                  <div className="flex gap-1 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button type="button" onClick={() => openFileEditor(file)} className={`p-1 ${message.role === 'user' ? 'hover:bg-blue-800' : 'hover:bg-gray-700'} rounded`} title="Editar">
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                    </button>
-                                    <button type="button" onClick={() => createThreadFromFile(file)} className={`p-1 ${message.role === 'user' ? 'hover:bg-blue-800' : 'hover:bg-gray-700'} rounded`} title="Nuevo hilo">
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                       <div className="whitespace-pre-wrap break-words text-sm">{message.content}</div>
                     </div>
                     {message.role === 'assistant' && <button onClick={() => handleCopyMessage(message.content)} className="self-start mt-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">Copiar</button>}
@@ -720,33 +575,16 @@ export default function ChatPage() {
             {attachedFiles.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {attachedFiles.map((file) => (
-                  <div key={file.id} className="relative group">
+                  <div key={file.id} className="relative inline-block">
                     {file.type === 'image' ? (
-                      <div className="relative">
-                        <img src={file.data} alt={file.name} className="h-16 rounded border border-gray-700" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-1">
-                          <button type="button" onClick={() => createThreadFromFile(file)} className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded" title="Nuevo hilo">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                          </button>
-                        </div>
-                      </div>
+                      <img src={file.data} alt={file.name} className="h-16 rounded border border-gray-700" />
                     ) : (
-                      <div className="relative">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded border border-gray-700 hover:border-gray-600 transition-colors">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                          <span className="text-sm">{file.name}</span>
-                          <div className="flex gap-1 ml-2">
-                            <button type="button" onClick={() => openFileEditor(file)} className="p-1 hover:bg-gray-700 rounded" title="Editar">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                            </button>
-                            <button type="button" onClick={() => createThreadFromFile(file)} className="p-1 hover:bg-blue-700 rounded text-blue-400" title="Nuevo hilo">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                            </button>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded border border-gray-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span className="text-sm">{file.name}</span>
                       </div>
                     )}
-                    <button type="button" onClick={() => removeAttachedFile(file.id)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 rounded-full p-1" title="Eliminar">
+                    <button type="button" onClick={() => removeAttachedFile(file.id)} className="absolute -top-2 -right-2 bg-gray-700 hover:bg-gray-600 rounded-full p-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
@@ -770,22 +608,7 @@ export default function ChatPage() {
               </div>
 
               <input ref={fileInputRef} type="file" multiple accept="image/*,.txt,.md" onChange={(e) => handleFilesSelect(e.target.files)} className="hidden" />
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSubmit(e)
-                  }
-                }}
-                placeholder="Escribe un mensaje... (Shift+Enter para nueva línea)"
-                disabled={loading}
-                className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-gray-800 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-700 disabled:opacity-50 resize-none overflow-hidden transition-all duration-200"
-                rows={1}
-                style={{ minHeight: '42px', maxHeight: '200px' }}
-              />
+              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Escribe un mensaje..." disabled={loading} className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-gray-800 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-700 disabled:opacity-50" />
               {loading ? (
                 <button type="button" onClick={handleStopGeneration} className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Detener</button>
               ) : (
@@ -807,30 +630,6 @@ export default function ChatPage() {
             <div className="flex gap-3">
               <button onClick={() => { setShowProjectModal(false); setNewProjectName('') }} className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
               <button onClick={handleCreateProject} disabled={!newProjectName.trim()} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50">Crear</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingFileId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Editar archivo</h3>
-              <button onClick={() => { setEditingFileId(null); setEditingFileContent('') }} className="text-gray-400 hover:text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <textarea 
-              value={editingFileContent} 
-              onChange={(e) => setEditingFileContent(e.target.value)}
-              className="flex-1 px-4 py-3 bg-[#0f0f0f] border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gray-700 font-mono text-sm resize-none"
-              placeholder="Contenido del archivo..."
-              autoFocus
-            />
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => { setEditingFileId(null); setEditingFileContent('') }} className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
-              <button onClick={saveFileEdit} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Guardar cambios</button>
             </div>
           </div>
         </div>

@@ -149,3 +149,29 @@ enum UserRole {
   BETA
   OWNER
 }
+
+// FromE Core - Arquitectura Cognitiva
+model FromEProject {
+  id              String          @id @default(uuid())
+  objectives      Json            @default("[]")  // Array de strings
+  constraints     Json            @default("[]")  // Array de strings
+  contextSummary  String          @default("") @db.Text
+  lastUpdated     DateTime        @default(now())
+  messages        FromEMessage[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([createdAt])
+  @@index([lastUpdated])
+}
+
+model FromEMessage {
+  id          String        @id @default(uuid())
+  projectId   String
+  project     FromEProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role        String        // "user" | "assistant" | "system"
+  content     String        @db.Text
+  timestamp   DateTime      @default(now())
+
+  @@index([projectId, timestamp])
+}

@@ -540,8 +540,9 @@ export default function ChatPage() {
       {showSidebar && (
         <div className="w-64 bg-[#1a1a1a] border-r border-gray-800 flex flex-col">
           <div className="p-4 border-b border-gray-800">
-            <div className="mb-4">
-              <Image src="/logo-frome40.png" alt="From E" width={120} height={40} />
+            <div className="flex items-center gap-2 mb-4">
+              <Image src="/logo-from-e.png" alt="Logo" width={28} height={28} />
+              <span className="font-medium text-sm">From E Labs</span>
             </div>
             <button onClick={handleNewChat} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium">Nueva conversación</button>
           </div>
